@@ -1,6 +1,4 @@
-import os, time, random, sys
-
-import logging
+import os, time, random, select, sys
 
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
@@ -16,9 +14,9 @@ from config import (
 )
 from notifier import send_telegram_notification
 
-from runtime_utils import authenticate_drive, input_with_timeout
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
+# ==========================================================
+# --- HÀM CHÍNH (MAIN) - ĐÃ THÊM TỰ ĐỘNG HÓA VÀ VÒNG LẶP ---
+# ==========================================================
 
 if __name__ == "__main__":
     # 1. KIỂM TRA CẤU HÌNH VÀ BẮT ĐẦU XÁC THỰC DRIVE
@@ -38,19 +36,60 @@ if __name__ == "__main__":
         send_telegram_notification(f"LỖI KHỞI ĐỘNG: {error_msg}")
         exit()
 
-    # 2. XÁC THỰC GOOGLE DRIVE (dùng hàm tái sử dụng)
+    # 2. XÁC THỰC GOOGLE DRIVE
     print("Đang xác thực Google Drive...")
+    gauth = GoogleAuth()
+    gauth.settings['client_config_file'] = CLIENT_SECRETS_FILE
+    gauth.settings['save_credentials_file'] = CREDENTIALS_FILE
+
+    # --- KHỐI THỬ TẢI TOKEN CŨ VÀ XỬ LÝ LỖI ---
     try:
-        drive_service = authenticate_drive(CLIENT_SECRETS_FILE, CREDENTIALS_FILE)
+        # 1. Thử tải token cũ
+        gauth.LoadCredentialsFile(CREDENTIALS_FILE)
+
+        # 2. Kiểm tra nếu token tải lên bị lỗi hoặc hết hạn
+        if gauth.credentials is None or gauth.credentials.access_token_expired:
+            raise Exception("Token không hợp lệ hoặc đã hết hạn.")
+
+        print("✅ Đã tải mã token thành công.")
+
     except Exception as e:
-        error_msg_critical_auth = f"❌ Lỗi nghiêm trọng khi xác thực Drive: {e}"
-        print(error_msg_critical_auth)
-        send_telegram_notification(f"LỖI NGHIÊM TRỌNG DRIVE: {error_msg_critical_auth}")
-        exit()
+        # Bất kỳ lỗi nào khi tải token hoặc token hết hạn đều nhảy vào đây
+        error_msg_token = f"⚠️ LỖI TOKEN GẶP PHẢI: {e}. Bắt buộc phải xác thực lại."
+        print(error_msg_token)
+        # GỬI THÔNG BÁO CẦN XÁC THỰC LẠI
+        send_telegram_notification(f"CẦN XÁC THỰC DRIVE: {error_msg_token}")
+
+        # --- LOGIC QUAN TRỌNG: XÓA FILE HỎNG ---
+        if os.path.exists(CREDENTIALS_FILE):
+            os.remove(CREDENTIALS_FILE)
+            print(f"-> Đã xóa file token hỏng: {CREDENTIALS_FILE}")
+
+        # --- BẮT ĐẦU QUÁ TRÌNH XÁC THỰC LẠI QUA WEB ---
+        print("Mã token chưa tồn tại hoặc đã hết hạn. Đang xác thực qua Web...")
+        try:
+            gauth.LocalWebserverAuth()
+            if gauth.credentials:
+                gauth.SaveCredentialsFile(CREDENTIALS_FILE)
+                print("✅ Đã xác thực thành công và lưu mã token mới.")
+                # GỬI THÔNG BÁO XÁC THỰC THÀNH CÔNG
+                send_telegram_notification("✅ XÁC THỰC DRIVE: Đã xác thực lại Google Drive thành công.")
+            else:
+                error_msg_auth_fail = "❌ Xác thực Drive thất bại."
+                print(error_msg_auth_fail)
+                send_telegram_notification(f"LỖI DRIVE: {error_msg_auth_fail}")
+                exit()
+        except Exception as e:
+            error_msg_critical_auth = f"❌ Lỗi nghiêm trọng khi xác thực Drive: {e}"
+            print(error_msg_critical_auth)
+            send_telegram_notification(f"LỖI NGHIÊM TRỌNG DRIVE: {error_msg_critical_auth}")
+            exit()
+
+    drive_service = GoogleDrive(gauth)
     print("✅ Đã kết nối Google Drive thành công.")
 
     # ==========================================================
-    # --- 4. VÒNG LẶP TỰ ĐỘNG HÓA CHÍNH ---
+    # --- 4. VÒNG LẶP TỰ ĐỘNG HÓA CHÍNH (ĐÃ SỬA THEO YÊU CẦU) ---
     # ==========================================================
     while True:
         print("\n" + "="*70)
@@ -58,14 +97,13 @@ if __name__ == "__main__":
         print("="*70)
 
         # --- TẢI CẤU HÌNH ---
-        dynamic_app_modes_raw = None
         try:
             dynamic_app_modes_raw = load_app_modes_from_sheet(GSHEET_ID)
         except Exception as e:
             error_msg_load_sheet = f"❌ Lỗi nghiêm trọng khi tải cấu hình từ Google Sheet: {e}"
             print(error_msg_load_sheet)
             send_telegram_notification(f"LỖI SHEET NGHIÊM TRỌNG: {error_msg_load_sheet}")
-            # tiếp tục, dynamic_app_modes_raw vẫn là None
+            # Không exit() ở đây mà chỉ time.sleep(TIMEOUT_SECONDS) và continue như logic cũ
 
         if dynamic_app_modes_raw is None:
             print("\n❌ KHÔNG THỂ TẢI CẤU HÌNH TỪ GOOGLE SHEET. Chương trình sẽ thử lại sau 5 giây.")
@@ -96,18 +134,18 @@ if __name__ == "__main__":
         if 6 not in APP_MODES:
             APP_MODES[6] = {
                 "name": "Truyện Cổ Tích (AI)",
-                "domains": ["AI_GENERATED_FAIRY_TALE"],
+                "domains": ["AI_GENERATED_FAIRY_TALE"], # Dùng một chủ đề giả để logic check không bị lỗi
                 "function": run_fairy_tale_app,
-                "mode": "auto"
+                "mode": "auto" # Thiết lập mặc định
             }
 
         # Thêm Truyện Cười
         if 7 not in APP_MODES:
             APP_MODES[7] = {
                 "name": "Truyện Cười (AI)",
-                "domains": ["AI_GENERATED_JOKE"],
+                "domains": ["AI_GENERATED_JOKE"], # Dùng một chủ đề giả để logic check không bị lỗi
                 "function": run_joke_app,
-                "mode": "auto"
+                "mode": "auto" # Thiết lập mặc định
             }
 
         if not APP_MODES:
@@ -123,7 +161,7 @@ if __name__ == "__main__":
 
         if not available_apps:
             print("❌ Lỗi: Không có ứng dụng nào được cấu hình hợp lệ để chạy.")
-            time.sleep(TIMEOUT_SECONDS)
+            time.sleep(TIMEOUT_SECONDS) # Thêm sleep để tránh vòng lặp nhanh
             continue
 
         random.shuffle(available_apps)
@@ -142,12 +180,15 @@ if __name__ == "__main__":
             # --- LOGIC CHỌN DOMAIN DỰA TRÊN APP_ID ---
             chosen_domain = None
             if app_id == 1: # CAUCHUYEN
+                # Rule 1: Chọn ngẫu nhiên từ domains
                 chosen_domain = random.choice(app_domains)
                 print("Lựa chọn: Ngẫu nhiên (CAUCHUYEN)")
             elif app_id in [6, 7]: # FAIRYTALE hoặc JOKE
+                # Rule 3: KHÔNG CẦN DOMAIN TỪ SHEET, AI TỰ TẠO
                 chosen_domain = f"AI_Generated_{app_name}"
                 print(f"Lựa chọn: Chủ đề tự động tạo bởi AI ({app_name})")
             elif app_domains:
+                # Rule 2: Chọn chủ đề ĐẦU TIÊN (Cho các app còn lại)
                 chosen_domain = app_domains[0]
                 print("Lựa chọn: Chủ đề đầu tiên của cột (B->E)")
 
@@ -159,6 +200,7 @@ if __name__ == "__main__":
                     app_func(drive_service, chosen_domain)
                     print(f"\n--- KẾT THÚC THỰC THI: {app_name.upper()} ---\n")
                 except Exception as e:
+                    # GỬI THÔNG BÁO LỖI CHẠY ỨNG DỤNG
                     error_msg_run_app = f"❌ Lỗi nghiêm trọng trong quá trình chạy ứng dụng {app_name}: {e}"
                     print(error_msg_run_app)
                     send_telegram_notification(f"LỖI CHẠY APP: {error_msg_run_app}")
@@ -166,26 +208,52 @@ if __name__ == "__main__":
             # D. Tùy chọn tiếp tục hoặc dừng hẳn (CHỈ HỎI KHI CHẠY THÀNH CÔNG/GẶP LỖI SAU KHI CHỌN DOMAIN)
             while True:
                 try:
+                    # Cố gắng thực hiện Input có Timeout (sẽ lỗi trên Windows)
                     prompt = f"Bạn có muốn tiếp tục chạy một vòng lặp ngẫu nhiên nữa không? (y/n) (Tự động tiếp tục sau {TIMEOUT_SECONDS}s): "
-                    choice = input_with_timeout(prompt, TIMEOUT_SECONDS, default='y')
-                except Exception:
-                    logging.exception("Lỗi khi chờ input; tiếp tục tự động.")
-                    choice = 'y'
-                    time.sleep(TIMEOUT_SECONDS)
+                    print(prompt, end='', flush=True)
+
+                    # Sử dụng select.select để chờ input trong x giây
+                    # Lỗi WinError 10038 sẽ xảy ra tại đây trên Windows
+                    i, _, _ = select.select([sys.stdin], [], [], TIMEOUT_SECONDS)
+
+                    if i:
+                        # Có input, đọc input từ stdin
+                        choice = sys.stdin.readline().strip().lower()
+                    else:
+                        # Timeout, tự động chọn 'y'
+                        choice = 'y'
+                        print("\n⏰ Hết giờ! Tự động chọn 'y' (chạy tiếp).")
+
+                except OSError as e:
+                    # Bắt lỗi Windows (WinError 10038) hoặc lỗi khác của select
+                    if 'not a socket' in str(e):
+                        # Lỗi Windows đặc trưng -> Chuyển sang chế độ Tự động
+                        print(f"\n⚠️ Cảnh báo Windows: Không thể dùng select.select() với stdin. Chuyển sang chế độ Tự động chạy tiếp sau {TIMEOUT_SECONDS} giây.")
+                        choice = 'y'
+                        time.sleep(TIMEOUT_SECONDS) # Chờ một khoảng thời gian trước khi tự động chạy tiếp
+                    else:
+                        # Xử lý các lỗi OSError khác (Nếu có)
+                        print(f"\n❌ Lỗi OSError nghiêm trọng: {e}. Tự động chạy tiếp.")
+                        choice = 'y'
+                        time.sleep(TIMEOUT_SECONDS)
+
 
                 if choice == 'n':
                     print("Chương trình đã dừng. Tạm biệt!")
                     exit()
                 elif choice == 'y':
-                    print(f"Tiếp tục chạy vòng lặp mới sau {TIMEOUT_SECONDS} giây...")
+                    # Đảm bảo bạn chỉ ngủ 3 giây hoặc dùng biến TIMEOUT_SECONDS để làm chậm vòng lặp
+                    print("Tiếp tục chạy vòng lặp mới sau 3 giây...")
+                    # LƯU Ý: time.sleep(3) hoặc time.sleep(TIMEOUT_SECONDS) tùy ý bạn
                     time.sleep(TIMEOUT_SECONDS)
-                    break
+                    break # Quay lại đầu vòng lặp while True để tải lại cấu hình
                 else:
                     print("Lựa chọn không hợp lệ. Vui lòng nhập 'y' hoặc 'n'.")
 
         else:
-            error_msg_no_domain = f"❌ Lỗi: Ứng dụng '{app_name}' không có danh sách lĩnh vực/chủ đề được định nghĩa. Tự động chuyển sang vòng lặp mới sau {TIMEOUT_SECONDS} giây."
+            # XỬ LÝ LỖI: Ứng dụng không có lĩnh vực/chủ đề
+            error_msg_no_domain = f"❌ Lỗi: Ứng dụng '{app_name}' không có danh sách lĩnh vực/chủ đề được định nghĩa. Tự động chuyển sang vòng lặp mới sau 2 giây."
             print(error_msg_no_domain)
             send_telegram_notification(f"LỖI CẤU HÌNH: {error_msg_no_domain}")
             time.sleep(TIMEOUT_SECONDS)
-            continue
+            continue # Tự động bắt đầu vòng lặp mới mà KHÔNG cần hỏi
