@@ -34,8 +34,9 @@ def get_random_pexels_image(query, slide_index):
         return None
 
     THEME_KEYWORDS = [
-        "rain", "snow", "forest", "mountain", "sea beach",
-        "sunset", "sunrise", "old books", "potted plant indoor"
+        "rain", "snow", "forest", "mountain", "sea", "beach",
+        "sunset", "sunrise", "book", "plant", "flower", "sun",
+        "village", "city", "house", "book", "tree", "street"
     ]
     random_theme = random.choice(THEME_KEYWORDS)
     print(f"  - Đang thử lấy ảnh nền từ Pexels theo chủ đề ngẫu nhiên: '{random_theme}'")
@@ -89,8 +90,9 @@ def get_random_unsplash_image(query, slide_index):
         return None
 
     THEME_KEYWORDS = [
-        "rain", "snow", "forest", "mountain", "sea beach",
-        "sunset", "sunrise", "old books", "potted plant indoor"
+        "rain", "snow", "forest", "mountain", "sea", "beach",
+        "sunset", "sunrise", "book", "plant", "flower", "sun",
+        "village", "city", "house", "book", "tree", "street"
     ]
     random_theme = random.choice(THEME_KEYWORDS)
     print(f"  - Đang thử lấy ảnh nền từ Unsplash API theo chủ đề ngẫu nhiên: '{random_theme}'")
