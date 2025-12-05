@@ -1,0 +1,8 @@
+pillow
+requests
+python-dotenv
+pydrive2
+google-genai
+google-auth
+google-auth-oauthlib
+google-auth-httplib2

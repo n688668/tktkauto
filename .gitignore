@@ -1,5 +1,6 @@
 .env
 .venv
-tiktok_env
 credentials.json
 auto_creds.txt
+venv/
+tiktok_env/
