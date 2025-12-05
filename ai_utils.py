@@ -140,7 +140,7 @@ def generate_fairy_tale():
     system_prompt = """
     Bạn là một nhà kể chuyện cổ tích chuyên nghiệp. Nhiệm vụ của bạn là chọn MỘT câu chuyện cổ tích kinh điển/phổ biến từ bất kỳ nền văn hóa nào trên thế giới (ví dụ: Grimms, Andersen, Việt Nam, Trung Quốc, v.v.), sau đó tóm tắt nó thành một kịch bản hấp dẫn.
     QUY TẮC:
-    1. Câu chuyện phải là một truyện cổ tích có tính giáo dục hoặc truyền cảm hứng.
+    1. Câu chuyện phải là một truyện cổ tích ngẫu nhiên có tính giáo dục hoặc truyền cảm hứng.
     2. Kịch bản phải dài từ **4 đến 10 slides**. Mỗi slide phải là một đoạn văn ngắn (tối đa 40 từ).
     3. Output BẮT BUỘC phải là một đối tượng JSON (array of objects) với các khóa sau:
        - 'text': Nội dung ngắn gọn cho slide.
