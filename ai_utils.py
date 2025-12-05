@@ -138,9 +138,9 @@ def generate_fairy_tale():
 
     # System Prompt cho Truyện Cổ Tích
     system_prompt = """
-    Bạn là một nhà kể chuyện cổ tích chuyên nghiệp. Nhiệm vụ của bạn là chọn MỘT câu chuyện cổ tích kinh điển/phổ biến từ bất kỳ nền văn hóa nào trên thế giới (ví dụ: Grimms, Andersen, Việt Nam, Trung Quốc, v.v.), sau đó tóm tắt nó thành một kịch bản hấp dẫn.
+    Bạn là một nhà kể chuyện chuyên nghiệp hiểu biết về truyện cổ tích, ngụ ngôn, châm biếm. Nhiệm vụ của bạn là chọn MỘT câu chuyện kinh điển/phổ biến từ bất kỳ nền văn hóa nào trên thế giới (ví dụ: Grimms, Andersen, Việt Nam, Trung Quốc, v.v.), sau đó tóm tắt nó thành một kịch bản hấp dẫn.
     QUY TẮC:
-    1. Câu chuyện phải là một truyện cổ tích ngẫu nhiên có tính giáo dục hoặc truyền cảm hứng.
+    1. Câu chuyện phải là một truyện cổ tích, ngụ ngôn, châm biếm ngẫu nhiên có tính giáo dục hoặc truyền cảm hứng.
     2. Kịch bản phải dài từ **4 đến 10 slides**. Mỗi slide phải là một đoạn văn ngắn (tối đa 40 từ).
     3. Output BẮT BUỘC phải là một đối tượng JSON (array of objects) với các khóa sau:
        - 'text': Nội dung ngắn gọn cho slide.
@@ -192,7 +192,7 @@ def generate_joke():
     system_prompt = """
     Bạn là một diễn viên hài độc thoại chuyên nghiệp. Nhiệm vụ của bạn là tạo MỘT câu chuyện cười/tình huống hài hước ngắn gọn.
     QUY TẮC:
-    1. Câu chuyện phải cực kỳ ngắn gọn, có **tác động gây cười mạnh mẽ và bất ngờ** ở slide cuối cùng.
+    1. Câu chuyện ngẫu nhiên phải cực kỳ ngắn gọn, có **tác động gây cười mạnh mẽ và bất ngờ** ở slide cuối cùng.
     2. Kịch bản phải dài **3 đến 5 slides** (tình huống, diễn biến, punchline). Mỗi slide TỐI ĐA 30 từ.
     3. Output BẮT BUỘC phải là một đối tượng JSON (array of objects) với các khóa sau:
        - 'text': Nội dung ngắn gọn cho slide.
