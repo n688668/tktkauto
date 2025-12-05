@@ -68,7 +68,6 @@ TIMEOUT_SECONDS = 3
 def text_wrap(text, font, max_width):
     lines = []
     paragraphs = text.split('\n')
-    # ... (giữ nguyên logic text_wrap) ...
     for paragraph in paragraphs:
         if not paragraph:
             lines.append("")
@@ -91,7 +90,6 @@ def text_wrap(text, font, max_width):
 
 # --- HÀM TẠO ẢNH NỀN VÀ CHÈN CHỮ (PILLOW) ---
 def create_image_with_text(text_to_overlay, drive_service, slide_index, theme):
-    # ... (Giữ nguyên logic của bạn) ...
     filename_out = f"slide_{slide_index}_final.jpg"
     W, H = 1080, 1920
     temp_bg_path = None
@@ -565,7 +563,6 @@ def propose_content_and_image_query(app_name, user_input, num_slides=4):
         print(f"Lỗi khi gọi Gemini tạo nội dung {app_name}: {e}")
         return None, None, None
 
-
 # --- HÀM TẠO TRUYỆN CỔ TÍCH (GEMINI) ---
 def generate_fairy_tale():
     print("Bắt đầu: Yêu cầu Gemini tạo một câu chuyện cổ tích ngẫu nhiên...")
@@ -817,7 +814,6 @@ def run_tarot(drive_service, topic):
     if drive_file_links:
         full_message = (f"✅ <b>Quy trình TAROT HOÀN TẤT!</b>\n<b>Chủ đề:</b> {topic}\n<b>Caption gợi ý:</b> {final_caption}")
         send_telegram_notification(full_message, image_urls=drive_file_links)
-
 
 # 5. HÀM APP CUNG HOÀNG ĐẠO
 def run_cung_hoang_dao(drive_service, topic):
