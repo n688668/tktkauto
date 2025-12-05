@@ -33,13 +33,10 @@ def get_random_pexels_image(query, slide_index):
         print("  - Cảnh báo: PEXELS_API_KEY chưa được cấu hình. Bỏ qua Pexels.")
         return None
 
-    # DANH SÁCH CHỦ ĐỀ CỐ ĐỊNH (theo yêu cầu của người dùng)
     THEME_KEYWORDS = [
         "rain", "snow", "forest", "mountain", "sea beach",
         "sunset", "sunrise", "old books", "potted plant indoor"
     ]
-
-    # CHỌN CHỦ ĐỀ NGẪU NHIÊN TỪ DANH SÁCH
     random_theme = random.choice(THEME_KEYWORDS)
     print(f"  - Đang thử lấy ảnh nền từ Pexels theo chủ đề ngẫu nhiên: '{random_theme}'")
     modified_query = f"{random_theme} natural aesthetic no people"
@@ -91,7 +88,6 @@ def get_random_unsplash_image(query, slide_index):
         print("  - Cảnh báo: UNSPLASH_ACCESS_KEY chưa được cấu hình. Bỏ qua Unsplash.")
         return None
 
-    # DANH SÁCH CHỦ ĐỀ CỐ ĐỊNH (theo yêu cầu của người dùng)
     THEME_KEYWORDS = [
         "rain", "snow", "forest", "mountain", "sea beach",
         "sunset", "sunrise", "old books", "potted plant indoor"
@@ -164,7 +160,6 @@ def create_image_with_text(text_to_overlay, drive_service, slide_index, theme):
             )
 
     if temp_bg_path:
-        # ... (logic mở, crop ảnh) ...
         try:
             img = Image.open(temp_bg_path).convert('RGB')
         except Exception as e:
@@ -194,65 +189,89 @@ def create_image_with_text(text_to_overlay, drive_service, slide_index, theme):
         font = ImageFont.truetype(FONT_PATH, font_size)
     except IOError:
         font = ImageFont.load_default()
+        # adjust font_size if fallback
+        font_size = 24
 
     MAX_TEXT_WIDTH = W - 240
     wrapped_lines = text_wrap(text_to_overlay, font, MAX_TEXT_WIDTH)
 
     # =======================================================
-    # *** KHỐI SỬA CHỮA CĂN GIỮA DỌC ***
+    # *** TÍNH CHIỀU CAO DÒNG (LINE HEIGHT) CHÍNH XÁC VÀ KHOẢNG CÁCH DÒNG ***
     # =======================================================
-    # 1. Tính toán tổng chiều cao của khối văn bản
-    total_text_height = 0
-    line_spacing = 15
+    # cố gắng lấy ascent/descent từ font
+    try:
+        ascent, descent = font.getmetrics()
+        default_line_height = ascent + descent
+    except Exception:
+        default_line_height = font_size + 10
 
-    # Phải tính toán chiều cao từng dòng một cách chính xác
+    # line_spacing tỷ lệ theo font_size để tránh dính dòng
+    line_spacing = max(12, int(font_size * 0.20))
+
+    # Tính chiều cao thực tế cho từng dòng (dùng bounding box nếu cần)
+    line_heights = []
     for line in wrapped_lines:
-        if not line: continue
+        if not line:
+            # dùng 60% chiều cao mặc định cho dòng rỗng (tạo khoảng cách)
+            line_heights.append(int(default_line_height * 0.6))
+            continue
         try:
-            text_bbox = draw.textbbox((0, 0), line, font=font)
-            line_height = text_bbox[3] - text_bbox[1]
-            total_text_height += line_height + line_spacing
+            bbox = draw.textbbox((0, 0), line, font=font)
+            lh = bbox[3] - bbox[1]
+            # đảm bảo không nhỏ hơn default
+            if lh < default_line_height * 0.8:
+                lh = int(default_line_height)
         except Exception:
-            # Fallback nếu lỗi tính toán BB
-            total_text_height += font_size + 20
+            lh = int(default_line_height)
+        line_heights.append(int(lh))
 
-    # Bỏ đi khoảng cách dòng thừa cuối cùng
-    if total_text_height > 0:
-        total_text_height -= line_spacing
+    # Tổng chiều cao của khối văn bản = sum dòng + spacing giữa các dòng
+    total_text_height = sum(line_heights) + line_spacing * (max(0, len(line_heights) - 1))
 
     # 2. Đặt điểm bắt đầu Y tại trung tâm khung hình
     y_start_center = (H // 2)
     y_current = y_start_center - (total_text_height // 2)
+
     # =======================================================
+    # VẼ CÁC DÒNG VỚI KHOẢNG CÁCH ĐÃ TÍNH
+    # =======================================================
+    for idx, line in enumerate(wrapped_lines):
+        if not line:
+            y_current += line_heights[idx] + line_spacing
+            continue
 
-    for line in wrapped_lines:
-        if not line: continue
-
-        # Tính toán Bounding Box cho căn giữa ngang và nền
+        # Tính toán bounding box cho căn giữa ngang và lấy chiều rộng
         try:
             text_bbox = draw.textbbox((0, 0), line, font=font)
             textwidth = text_bbox[2] - text_bbox[0]
-            textheight = text_bbox[3] - text_bbox[1] # Chiều cao dòng
+            textheight = text_bbox[3] - text_bbox[1]
         except Exception:
             textwidth = font.getlength(line) if hasattr(font, 'getlength') else 500
-            textheight = font_size + 5 # Chiều cao dòng (Fallback)
+            textheight = line_heights[idx]
 
         # Căn giữa theo chiều ngang
         x = (W - textwidth) // 2
 
-        # Vẽ nền đen mờ sau chữ
-        draw.rectangle([(x - 20, y_current - 10), (x + textwidth + 20, y_current + textheight + 10)], fill=(0, 0, 0, 128))
+        # Vẽ nền đen mờ sau chữ (dùng alpha overlay đã paste phía trên)
+        padding_x = 24
+        padding_y = max(10, int(line_heights[idx] * 0.2))
+        rect_top = y_current - padding_y
+        rect_bottom = y_current + textheight + padding_y
+        draw.rectangle([(x - padding_x, rect_top), (x + textwidth + padding_x, rect_bottom)], fill=(0, 0, 0))
 
         # Vẽ chữ
         draw.text((x, y_current), line, fill=(255, 255, 255), font=font)
 
         # Cập nhật vị trí Y cho dòng tiếp theo
-        y_current += textheight + 15 # Dùng chiều cao dòng thực tế + 15px
+        y_current += line_heights[idx] + line_spacing
 
     filename_out = f"slide_{slide_index}_final.jpg"
     img.save(filename_out, format='JPEG', quality=85)
 
     if temp_bg_path and os.path.exists(temp_bg_path):
-        os.remove(temp_bg_path)
+        try:
+            os.remove(temp_bg_path)
+        except Exception:
+            pass
 
     return filename_out
