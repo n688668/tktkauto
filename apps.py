@@ -70,7 +70,7 @@ def run_phong_thuy(drive_service, topic):
     if not story_slides: return
 
     # 2. TẠO THƯ MỤC VÀ UPLOAD
-    safe_folder_name = f"PT {topic}" # bỏ .replace(' ', '-')
+    safe_folder_name = f"Phong Thủy {topic}" # bỏ .replace(' ', '-')
     new_folder_id = create_drive_folder(safe_folder_name, PHONG_THUY_DRIVE_FOLDER_ID, drive_service)
 
     if not new_folder_id:
@@ -102,7 +102,7 @@ def run_la_so_tu_vi(drive_service, topic):
     story_slides, image_query, final_caption = propose_content_and_image_query('tu_vi', topic, num_slides=5)
     if not story_slides: return
 
-    safe_folder_name = f"TV {topic}" # bỏ .replace(' ', '-')
+    safe_folder_name = f"Tử Vi {topic}" # bỏ .replace(' ', '-')
     new_folder_id = create_drive_folder(safe_folder_name, TU_VI_DRIVE_FOLDER_ID, drive_service)
 
     if not new_folder_id:
@@ -158,7 +158,7 @@ def run_cung_hoang_dao(drive_service, topic):
     story_slides, image_query, final_caption = propose_content_and_image_query('cung_hoang_dao', topic, num_slides=5)
     if not story_slides: return
 
-    safe_folder_name = f"CHĐ {topic}" # bỏ .replace(' ', '-')
+    safe_folder_name = f"Cung Hoàng Đạo {topic}" # bỏ .replace(' ', '-')
     new_folder_id = create_drive_folder(safe_folder_name, CUNG_HOANG_DAO_DRIVE_FOLDER_ID, drive_service)
 
     if not new_folder_id: return
@@ -188,7 +188,7 @@ def run_fairy_tale_app(drive_service, topic=None):
     # 2. TẠO THƯ MỤC VÀ UPLOAD
     # Tên thư mục sẽ lấy một phần nội dung slide đầu tiên
     first_text = story_slides[0]['text'].split('.')[0].strip()
-    safe_folder_name = f"CT {first_text}"
+    safe_folder_name = f"Truyện {first_text}"
     new_folder_id = create_drive_folder(safe_folder_name, FAIRY_TALE_DRIVE_FOLDER_ID, drive_service)
 
     if not new_folder_id:
@@ -225,7 +225,7 @@ def run_joke_app(drive_service, topic=None):
     # 2. TẠO THƯ MỤC VÀ UPLOAD
     # Tên thư mục sẽ lấy một phần nội dung slide đầu tiên
     first_text = story_slides[0]['text'].split('.')[0].strip()
-    safe_folder_name = f"TC {first_text}"
+    safe_folder_name = f"Truyện Cười {first_text}"
     new_folder_id = create_drive_folder(safe_folder_name, JOKE_DRIVE_FOLDER_ID, drive_service)
 
     if not new_folder_id:

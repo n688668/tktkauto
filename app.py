@@ -766,7 +766,7 @@ def run_la_so_tu_vi(drive_service, topic):
     story_slides, image_query, final_caption = propose_content_and_image_query('tu_vi', topic, num_slides=5)
     if not story_slides: return
 
-    safe_folder_name = f"TV {topic}" # bỏ .replace(' ', '-')
+    safe_folder_name = f"Tử Vi {topic}" # bỏ .replace(' ', '-')
     new_folder_id = create_drive_folder(safe_folder_name, TU_VI_DRIVE_FOLDER_ID, drive_service)
 
     if not new_folder_id:
